@@ -3,12 +3,13 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import type { UserGame, GameStatus } from "@/lib/types";
+import { StarDisplay } from "@/components/StarRating";
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   backlog: "Backlog",
   playing: "En cours",
   finished: "Terminé",
-  "100%": "100%",
+  "100%": "Platiné",
   abandoned: "Abandonné",
 };
 
@@ -28,22 +29,12 @@ const STATUS_TEXT: Record<GameStatus, string> = {
   abandoned: "#fb7185",
 };
 
-const STATUS_BAR: Record<GameStatus, string> = {
-  backlog:   "rgba(255,255,255,0.2)",
-  playing:   "var(--accent)",
-  finished:  "#34d399",
-  "100%":    "var(--accent)",
-  abandoned: "#fb7185",
-};
-
 interface Props {
   game: UserGame;
   onClick?: () => void;
 }
 
 export default function GameCard({ game, onClick }: Props) {
-  const completion = game.completion ?? 0;
-  // Show first platform only in the badge (most relevant)
   const mainPlatform = game.platforms?.[0] ?? null;
 
   return (
@@ -103,23 +94,10 @@ export default function GameCard({ game, onClick }: Props) {
           )}
         </div>
 
-        {/* Completion bar */}
-        {game.status !== "backlog" && (
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${completion}%` }}
-                transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-                className="h-full rounded-full"
-                style={{ background: STATUS_BAR[game.status] }}
-              />
-            </div>
-            <span className="text-[10px] tabular-nums" style={{ color: "var(--text-muted)" }}>
-              {completion}%
-            </span>
-          </div>
-        )}
+        {/* Star rating */}
+        <div className="mt-1">
+          <StarDisplay rating={game.rating ?? null} size={10} />
+        </div>
       </div>
     </motion.div>
   );

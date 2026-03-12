@@ -13,6 +13,8 @@ export interface UserGame {
   platforms: string[]; // auto-populated from RAWG
   status: GameStatus;
   completion: number; // 0–100
+  rating: number | null; // 0–5, demi-étoiles
+  comment: string | null; // critique personnelle
   addedAt: string; // ISO date
   updatedAt: string;
 }

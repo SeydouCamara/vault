@@ -7,12 +7,13 @@ import { searchGames } from "@/lib/rawg";
 import type { SearchResult } from "@/lib/rawg";
 import { addGame } from "@/lib/storage";
 import type { RawgGame, UserGame, GameStatus } from "@/lib/types";
+import { StarPicker } from "@/components/StarRating";
 
 const STATUSES: { value: GameStatus; label: string }[] = [
   { value: "backlog", label: "Backlog" },
-  { value: "playing", label: "En cours" },
+  { value: "playing", label: "En cours / Débuté" },
   { value: "finished", label: "Terminé" },
-  { value: "100%", label: "100%" },
+  { value: "100%", label: "Platiné" },
   { value: "abandoned", label: "Abandonné" },
 ];
 
@@ -28,7 +29,9 @@ export default function AddGameModal({ open, onClose, onAdded }: Props) {
   const [searchError, setSearchError] = useState<SearchResult["error"] | null>(null);
   const [selected, setSelected] = useState<RawgGame | null>(null);
   const [status, setStatus] = useState<GameStatus>("backlog");
-  const [completion, setCompletion] = useState(0);
+  const [completion] = useState(0);
+  const [rating, setRating] = useState<number | null>(null);
+  const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,7 +44,8 @@ export default function AddGameModal({ open, onClose, onAdded }: Props) {
       setSearchError(null);
       setSelected(null);
       setStatus("backlog");
-      setCompletion(0);
+      setRating(null);
+      setComment("");
     }
   }, [open]);
 
@@ -87,6 +91,8 @@ export default function AddGameModal({ open, onClose, onAdded }: Props) {
       platforms,
       status,
       completion: status === "100%" || status === "finished" ? 100 : completion,
+      rating,
+      comment: comment.trim() || null,
       addedAt: now,
       updatedAt: now,
     };
@@ -102,7 +108,6 @@ export default function AddGameModal({ open, onClose, onAdded }: Props) {
   }, [onClose]);
 
   const platforms = selected?.platforms?.map((p) => p.platform.name) ?? [];
-  const showCompletion = status === "playing";
 
   return (
     <AnimatePresence>
@@ -270,8 +275,6 @@ export default function AddGameModal({ open, onClose, onAdded }: Props) {
                               key={s.value}
                               onClick={() => {
                                 setStatus(s.value);
-                                if (s.value === "100%" || s.value === "finished") setCompletion(100);
-                                if (s.value === "backlog" || s.value === "abandoned") setCompletion(0);
                               }}
                               className="text-xs px-2.5 py-1 rounded-lg border transition-all"
                               style={status === s.value ? {
@@ -291,29 +294,35 @@ export default function AddGameModal({ open, onClose, onAdded }: Props) {
                         </div>
                       </div>
 
-                      {/* Completion slider */}
-                      <AnimatePresence>
-                        {showCompletion && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                          >
-                            <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 flex items-center justify-between">
-                              <span>Completion</span>
-                              <span className="font-bold" style={{ color: "var(--accent)" }}>{completion}%</span>
-                            </label>
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              value={completion}
-                              onChange={(e) => setCompletion(Number(e.target.value))}
-                              className="w-full"
-                            />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      {/* Note */}
+                      <div className="py-3 px-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                        <StarPicker rating={rating} onChange={setRating} />
+                      </div>
+
+                      {/* Commentaire */}
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1.5 block">
+                          <svg width="11" height="11" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                          </svg>
+                          Critique
+                          <span style={{ color: "var(--text-muted)", opacity: 0.5, textTransform: "none", letterSpacing: 0 }}>— optionnel</span>
+                        </label>
+                        <textarea
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                          placeholder="Ton avis sur ce jeu…"
+                          rows={3}
+                          className="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none transition-all"
+                          style={{
+                            background: "rgba(255,255,255,0.05)",
+                            border: "1px solid var(--border)",
+                            color: "var(--text-primary)",
+                          }}
+                          onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                          onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                        />
+                      </div>
 
                       {/* CTA */}
                       <button

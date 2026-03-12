@@ -4,24 +4,31 @@ import { useState, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import GameCard from "@/components/GameCard";
 import AddGameModal from "@/components/AddGameModal";
+import GameDetailModal from "@/components/GameDetailModal";
 import ThemePicker from "@/components/ThemePicker";
 import { getLibrary } from "@/lib/storage";
 import type { UserGame, GameStatus } from "@/lib/types";
 
 const STATUS_FILTERS: { value: GameStatus | "all"; label: string }[] = [
   { value: "all", label: "Tous" },
-  { value: "playing", label: "En cours" },
+  { value: "playing", label: "En cours / Débuté" },
   { value: "finished", label: "Terminés" },
-  { value: "100%", label: "100%" },
+  { value: "100%", label: "Platiné" },
   { value: "backlog", label: "Backlog" },
   { value: "abandoned", label: "Abandonnés" },
 ];
 
+type SortKey = "addedAt" | "rating";
+type SortDir = "desc" | "asc";
+
 export default function Home() {
   const [library, setLibrary] = useState<UserGame[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<UserGame | null>(null);
   const [statusFilter, setStatusFilter] = useState<GameStatus | "all">("all");
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("addedAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   useEffect(() => {
     setLibrary(getLibrary());
@@ -29,13 +36,36 @@ export default function Home() {
 
   const reload = () => setLibrary(getLibrary());
 
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  };
+
   const filtered = useMemo(() => {
-    return library.filter((g) => {
+    const list = library.filter((g) => {
       if (statusFilter !== "all" && g.status !== statusFilter) return false;
       if (search && !g.name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [library, statusFilter, search]);
+
+    return [...list].sort((a, b) => {
+      let diff = 0;
+      if (sortKey === "addedAt") {
+        diff = new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
+      } else {
+        // null ratings go to the end regardless of direction
+        if (a.rating === null && b.rating === null) diff = 0;
+        else if (a.rating === null) return 1;
+        else if (b.rating === null) return -1;
+        else diff = a.rating - b.rating;
+      }
+      return sortDir === "desc" ? -diff : diff;
+    });
+  }, [library, statusFilter, search, sortKey, sortDir]);
 
   const stats = useMemo(() => ({
     total: library.length,
@@ -138,6 +168,46 @@ export default function Home() {
               </button>
             ))}
           </div>
+
+          <div className="w-px h-5 bg-white/10 shrink-0" />
+
+          {/* Sort */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {([
+              { key: "addedAt" as SortKey, label: "Date" },
+              { key: "rating"  as SortKey, label: "Note" },
+            ]).map(({ key, label }) => {
+              const active = sortKey === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleSort(key)}
+                  className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg transition-all whitespace-nowrap"
+                  style={active ? {
+                    background: "var(--accent)",
+                    color: "var(--accent-text)",
+                    fontWeight: 600,
+                  } : {
+                    color: "var(--text-muted)",
+                  }}
+                  onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = "var(--text-primary)"; }}
+                  onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "var(--text-muted)"; }}
+                >
+                  {label}
+                  <svg
+                    width="10" height="10" fill="none" viewBox="0 0 24 24"
+                    style={{
+                      transition: "transform 0.2s",
+                      transform: active && sortDir === "asc" ? "rotate(180deg)" : "rotate(0deg)",
+                      opacity: active ? 1 : 0.4,
+                    }}
+                  >
+                    <path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12l7 7 7-7" />
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -157,7 +227,7 @@ export default function Home() {
           <motion.div layout className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4">
             <AnimatePresence>
               {filtered.map((game) => (
-                <GameCard key={game.id} game={game} />
+                <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
               ))}
             </AnimatePresence>
           </motion.div>
@@ -165,6 +235,11 @@ export default function Home() {
       </main>
 
       <AddGameModal open={modalOpen} onClose={() => setModalOpen(false)} onAdded={reload} />
+      <GameDetailModal
+        game={selectedGame}
+        onClose={() => setSelectedGame(null)}
+        onUpdated={reload}
+      />
     </div>
   );
 }
