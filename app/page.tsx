@@ -174,7 +174,7 @@ export default function Home() {
           {/* Sort */}
           <div className="flex items-center gap-1.5 shrink-0">
             {([
-              { key: "addedAt" as SortKey, label: "Date" },
+              { key: "addedAt" as SortKey, label: "Date d'ajout" },
               { key: "rating"  as SortKey, label: "Note" },
             ]).map(({ key, label }) => {
               const active = sortKey === key;
