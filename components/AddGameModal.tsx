@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { searchGames } from "@/lib/rawg";
-import type { SearchResult } from "@/lib/rawg";
 import { addGame } from "@/lib/storage";
 import type { RawgGame, UserGame, GameStatus } from "@/lib/types";
 import { StarPicker } from "@/components/StarRating";
@@ -26,7 +25,7 @@ interface Props {
 export default function AddGameModal({ open, onClose, onAdded }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<RawgGame[]>([]);
-  const [searchError, setSearchError] = useState<SearchResult["error"] | null>(null);
+  const [searchError, setSearchError] = useState<"missing_key" | "fetch_error" | null>(null);
   const [selected, setSelected] = useState<RawgGame | null>(null);
   const [status, setStatus] = useState<GameStatus>("backlog");
   const [completion] = useState(0);
